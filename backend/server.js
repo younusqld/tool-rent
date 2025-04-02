@@ -17,20 +17,22 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
 });
-//database connection test
+
+// Database connection test
 async function testDatabaseConnection() {
-    try{
-        const connection = await pool.getConnection();
-        await connection.ping();
-        console.log("Database connected successfully");
-        connection.release();
-    }catch(error){
-        console.log("Connection faild", error.message);
-    }
+  try {
+    const connection = await pool.getConnection();
+    await connection.ping();
+    console.log("Database connected successfully");
+    connection.release();
+  } catch (error) {
+    console.log("Connection failed", error.message);
+  }
 }
 testDatabaseConnection();
+
 // Signup API
 app.post("/signup", async (req, res) => {
   const { name, email, password } = req.body;
@@ -78,11 +80,7 @@ app.post("/login", async (req, res) => {
     }
 
     // Generate JWT Token
-    const token = jwt.sign(
-      { userId: user[0].user_id },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    const token = jwt.sign({ userId: user[0].user_id }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
     res.status(200).json({
       token,
@@ -97,8 +95,34 @@ app.post("/login", async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 });
+app.post("/order", async (req, res) => {
+  try {
+    // Destructure the request body
+    const { name, price, quantity, duration } = req.body;
 
-// Verify Token API (Protected Route)
+    // Validate input
+    if (!name || !price || !quantity || !duration) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    // Insert the order into the database
+    const [booking] = await pool.query(
+      "INSERT INTO rental (name, price, quantity, duration) VALUES (?, ?, ?, ?)",
+      [name, price, quantity, duration]
+    );
+
+    // Respond with success message and booking ID
+    res.status(201).json({
+      message: "Order placed successfully.",
+      bookingId: booking.insertId,
+    });
+  } catch (error) {
+    console.error("Order placement error:", error.message);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+// Profile API (Protected Route)
 app.get("/profile", async (req, res) => {
   const token = req.headers["authorization"];
 
@@ -126,78 +150,54 @@ app.get("/profile", async (req, res) => {
   }
 });
 
+// Get all tools
 app.get("/products", async (req, res) => {
-    try {
-      const [tools] = await pool.query("SELECT * FROM tools");
-      res.status(200).json(tools);
-    } catch (error) {
-      res.status(500).json({ message: "Server Error" });
-    }
-  });
-  app.get("/products/:id", async (req, res) => {
-    const { id } = req.params;
-    try {
-      const [product] = await pool.query("SELECT * FROM tools WHERE tool_id = ?", [id]);
-      if (product.length === 0) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      res.status(200).json(product[0]);
-    } catch (error) {
-      res.status(500).json({ message: "Server Error" });
-    }
-  });
-  //order
-  app.post("/order", async (req, res) => {
-    try {
-      // Destructure the request body
-      const { name, price, quantity, duration } = req.body;
-  
-      // Validate input
-      if (!name || !price || !quantity || !duration) {
-        return res.status(400).json({ message: "All fields are required." });
-      }
-  
-      // Insert the order into the database
-      const [booking] = await pool.query(
-        "INSERT INTO rental (name, price, quantity, duration) VALUES (?, ?, ?, ?)",
-        [name, price, quantity, duration]
-      );
-  
-      // Respond with success message and booking ID
-      res.status(201).json({
-        message: "Order placed successfully.",
-        bookingId: booking.insertId,
-      });
-    } catch (error) {
-      console.error("Order placement error:", error.message);
-      res.status(500).json({ message: "Server Error" });
-    }
-  });
-  
-  // Add a new tool to the database
-app.post("/admin/add-tool", async (req, res) => {
-  const { name, price, quantity } = req.body;
-
   try {
-    // Validate input
-    if (!name || !price || !quantity) {
-      return res.status(400).json({ message: "All fields are required." });
-    }
-
-    // Insert tool into the database
-    await pool.query(
-      "INSERT INTO tools (name, price, quantity) VALUES (?, ?, ?)",
-      [name, price, quantity]
-    );
-
-    res.status(201).json({ message: "Tool added successfully." });
+    const [tools] = await pool.query("SELECT * FROM tools");
+    res.status(200).json(tools);
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Server Error" });
   }
 });
 
-// Remove a tool from the database
+// Get a single tool by ID
+app.get("/products/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [product] = await pool.query("SELECT * FROM tools WHERE tool_id = ?", [id]);
+    if (product.length === 0) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    res.status(200).json(product[0]);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+// Add a new tool
+app.post("/admin/add-tool", async (req, res) => {
+  const { name, price, quantity, image, description } = req.body;
+
+  try {
+    // Validate input
+    if (!name || !price || !quantity) {
+      return res.status(400).json({ message: "All required fields are missing.", fields: ["name", "price", "quantity"] });
+    }
+
+    // Insert tool into the database
+    await pool.query(
+      "INSERT INTO tools (name, price, quantity, image, description) VALUES (?, ?, ?, ?, ?)",
+      [name, price, quantity, image || null, description || null]
+    );
+
+    res.status(201).json({ message: "Tool added successfully." });
+  } catch (error) {
+    console.error("Error adding tool:", error.message);
+    res.status(500).json({ message: "Server Error", details: error.message });
+  }
+});
+
+// Remove a tool
 app.delete("/admin/remove-tool/:id", async (req, res) => {
   const { id } = req.params;
 
@@ -238,8 +238,34 @@ app.get("/admin/rental-summary", async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 });
+app.get("/profile", async (req, res) => {
+  const token = req.headers["authorization"];
 
-// Start the Server
+  if (!token) {
+    return res.status(401).json({ message: "Access Denied. No Token Provided." });
+  }
+
+  try {
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    const [user] = await pool.query("SELECT * FROM users WHERE user_id = ?", [verified.userId]);
+
+    if (user.length === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    res.status(200).json({
+      user: {
+        user_id: user[0].user_id,
+        name: user[0].name,
+        email: user[0].email,
+      },
+    });
+  } catch (error) {
+    res.status(401).json({ message: "Invalid Token" });
+  }
+});
+
+// Start the server
 app.listen(process.env.PORT, () => {
-  console.log(` Server running on http://localhost:${process.env.PORT}`);
+  console.log(`Server running on http://localhost:${process.env.PORT}`);
 });

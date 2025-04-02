@@ -51,6 +51,7 @@ function App() {
     localStorage.removeItem("token");
     setIsAuthenticated(false);
     setIsAdminAuthenticated(false); // Reset admin auth on logout
+    location.reload();
     navigate("/login");
   };
 
@@ -68,7 +69,10 @@ function App() {
 
       <main className="min-h-screen">
         <Routes>
+          {/* Redirect root to /home or /login based on authentication */}
           <Route path="/" element={<Navigate to={isAuthenticated ? "/home" : "/login"} />} />
+
+          {/* Login Route */}
           <Route
             path="/login"
             element={
@@ -79,22 +83,31 @@ function App() {
               )
             }
           />
+
+          {/* Signup Route */}
           <Route
             path="/signup"
             element={!isAuthenticated ? <Signup /> : <Navigate to="/home" />}
           />
+
+          {/* Home Route */}
           <Route
             path="/home"
             element={isAuthenticated ? <Home /> : <Navigate to="/login" />}
           />
+
+          {/* Product Details Route */}
           <Route
             path="/product/:id"
             element={isAuthenticated ? <ProductDetails /> : <Navigate to="/login" />}
           />
+
+          {/* Checkout Route */}
           <Route
             path="/checkout/:id"
             element={isAuthenticated ? <Checkout /> : <Navigate to="/login" />}
           />
+
           {/* Admin Route with Password Prompt */}
           <Route
             path="/admin"

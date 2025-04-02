@@ -65,7 +65,7 @@ function Checkout() {
   }
 
   return (
-    <section className="bg-gray-100 min-h-screen py-8 flex justify-center">
+    <section className="bg-gray-900 min-h-screen py-8 flex justify-center">
       <div className="w-full max-w-lg bg-white p-6 rounded-lg shadow-md">
         <h1 className="text-2xl font-bold text-gray-800 mb-4">Checkout</h1>
 

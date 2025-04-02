@@ -26,7 +26,7 @@ function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900">
       <div className="bg-white p-6 rounded-lg shadow-lg w-96">
         <h2 className="text-2xl font-bold mb-4 text-center">Signup</h2>
         <form onSubmit={handleSubmit}>
@@ -56,7 +56,7 @@ function Signup() {
           />
           <button
             type="submit"
-            className="bg-blue-500 text-white px-4 py-2 rounded w-full"
+            className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold py-3 rounded-lg hover:opacity-90 transition duration-300"
           >
             Signup
           </button>
