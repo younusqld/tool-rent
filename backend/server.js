@@ -264,4 +264,9 @@ app.get("/profile", async (req, res) => {
     res.status(401).json({ message: "Invalid Token" });
   }
 });
+// Start the server
+app.listen(process.env.PORT, () => {
+  console.log(`Server running on http://localhost:${process.env.PORT}`);
+});
+
 
